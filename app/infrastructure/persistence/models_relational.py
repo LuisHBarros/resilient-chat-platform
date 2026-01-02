@@ -7,7 +7,7 @@ messages as JSON. This provides:
 - Easier analytics
 - Proper normalization
 """
-from sqlalchemy import Column, String, DateTime, Text, ForeignKey, Integer
+from sqlalchemy import Column, String, DateTime, Text, ForeignKey, Integer, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -36,6 +36,13 @@ class ConversationModel(Base):
         back_populates="conversation",
         cascade="all, delete-orphan",
         order_by="MessageModel.created_at"
+    )
+    
+    # Composite index for efficient queries: "latest conversations for a user"
+    # This index optimizes queries like: SELECT * FROM conversations 
+    # WHERE user_id = ? ORDER BY updated_at DESC LIMIT 10
+    __table_args__ = (
+        Index('idx_conversations_user_updated', 'user_id', 'updated_at'),
     )
 
 
@@ -67,4 +74,11 @@ class MessageModel(Base):
     
     # Relationship back to conversation
     conversation = relationship("ConversationModel", back_populates="messages")
+    
+    # Composite index for efficient queries: "messages in a conversation ordered by sequence"
+    # This index optimizes queries like: SELECT * FROM messages 
+    # WHERE conversation_id = ? ORDER BY sequence ASC
+    __table_args__ = (
+        Index('idx_messages_conversation_sequence', 'conversation_id', 'sequence'),
+    )
 

@@ -59,19 +59,20 @@ class PostgresRepository(RepositoryPort):
             expire_on_commit=False
         )
     
-    async def _create_tables(self):
+    async def _test_connection(self) -> bool:
         """
-        Create database tables if they don't exist.
+        Test database connection by executing a simple query.
         
-        NOTE: In production, use Alembic migrations instead of this method.
-        This method is only for development/testing. For production:
-        1. Run: alembic upgrade head
-        2. Remove or disable this method
-        
-        See: alembic/ directory for migration management.
+        Returns:
+            True if connection is healthy, False otherwise.
         """
-        async with self.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        try:
+            async with self.async_session() as session:
+                # Execute a simple query to test connectivity
+                await session.execute(select(1))
+                return True
+        except Exception:
+            return False
     
     async def save(self, conversation: Conversation) -> Conversation:
         """

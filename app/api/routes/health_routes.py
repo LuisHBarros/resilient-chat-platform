@@ -39,36 +39,89 @@ async def readiness_check():
     }
     all_healthy = True
     
-    # Check LLM provider
+    # Check LLM provider with real connectivity test
     try:
         llm = container.get_llm()
-        # Try a simple operation (if supported, or just check if it's initialized)
-        if hasattr(llm, "_client") and llm._client is not None:
-            checks["checks"]["llm"] = {"status": "healthy"}
-        else:
-            # For providers without _client, assume healthy if initialized
-            checks["checks"]["llm"] = {"status": "healthy"}
+        
+        # Test real connectivity by attempting to generate a minimal response
+        # Use a timeout to avoid hanging
+        import asyncio
+        
+        try:
+            # For MockProvider, this will work immediately
+            # For real providers, this tests actual API connectivity
+            test_response = await asyncio.wait_for(
+                llm.generate("test"),
+                timeout=5.0  # 5 second timeout for health check
+            )
+            checks["checks"]["llm"] = {
+                "status": "healthy",
+                "response_received": bool(test_response)
+            }
+        except asyncio.TimeoutError:
+            checks["checks"]["llm"] = {
+                "status": "unhealthy",
+                "error": "LLM provider timeout (no response within 5 seconds)"
+            }
+            all_healthy = False
+        except Exception as llm_error:
+            # Check if it's a configuration error (acceptable for health check)
+            error_str = str(llm_error).lower()
+            if "api key" in error_str or "credentials" in error_str or "configuration" in error_str:
+                checks["checks"]["llm"] = {
+                    "status": "unhealthy",
+                    "error": "LLM provider configuration error",
+                    "details": str(llm_error)
+                }
+            else:
+                checks["checks"]["llm"] = {
+                    "status": "unhealthy",
+                    "error": f"LLM provider error: {str(llm_error)}"
+                }
+            all_healthy = False
     except Exception as e:
         checks["checks"]["llm"] = {
             "status": "unhealthy",
-            "error": str(e)
+            "error": f"Failed to initialize LLM provider: {str(e)}"
         }
         all_healthy = False
     
-    # Check repository
+    # Check repository with real connectivity test
     try:
         repository = container.get_repository()
-        # Try a simple operation
-        await repository.find_by_id("health-check-test-id")
-        checks["checks"]["repository"] = {"status": "healthy"}
+        
+        # Test real database connectivity
+        # For PostgresRepository, use the connection test method
+        if hasattr(repository, "_test_connection"):
+            is_healthy = await repository._test_connection()
+            if is_healthy:
+                checks["checks"]["repository"] = {"status": "healthy"}
+            else:
+                checks["checks"]["repository"] = {
+                    "status": "unhealthy",
+                    "error": "Database connection test failed"
+                }
+                all_healthy = False
+        else:
+            # For InMemoryRepository, just verify it's initialized
+            # Try a simple operation
+            await repository.find_by_id("health-check-test-id")
+            checks["checks"]["repository"] = {"status": "healthy"}
     except Exception as e:
         # If it's a "not found" error, that's fine - repository is working
-        if "not found" in str(e).lower():
+        error_str = str(e).lower()
+        if "not found" in error_str or "none" in error_str:
             checks["checks"]["repository"] = {"status": "healthy"}
+        elif "connection" in error_str or "timeout" in error_str:
+            checks["checks"]["repository"] = {
+                "status": "unhealthy",
+                "error": f"Database connectivity error: {str(e)}"
+            }
+            all_healthy = False
         else:
             checks["checks"]["repository"] = {
                 "status": "unhealthy",
-                "error": str(e)
+                "error": f"Repository error: {str(e)}"
             }
             all_healthy = False
     
