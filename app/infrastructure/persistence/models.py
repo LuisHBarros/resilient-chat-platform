@@ -11,7 +11,7 @@ class ConversationModel(Base):
     """SQLAlchemy model for conversations."""
     __tablename__ = "conversations"
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, nullable=False, index=True)
     messages = Column(JSON, nullable=False, default=list)
     created_at = Column(DateTime, default=datetime.now, nullable=False)

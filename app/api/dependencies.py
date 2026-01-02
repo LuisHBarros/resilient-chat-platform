@@ -1,51 +1,27 @@
-"""API dependencies for dependency injection."""
-from app.application.services.chat_service import ChatService
-from app.infrastructure.config.settings import settings
-from app.infrastructure.llm import OpenAIProvider, BedrockProvider, MockProvider
-from app.infrastructure.persistence import InMemoryRepository
+"""API dependencies for dependency injection.
+
+This module provides FastAPI dependency functions that use the composition root
+(bootstrap.py) to resolve dependencies. This ensures all dependency resolution
+happens through the composition root.
+"""
+from fastapi import Request, Depends
+from app.bootstrap import get_container
+from app.application.use_cases.process_message import ProcessMessageUseCase
 
 
-def get_llm_provider():
+def get_process_message_use_case(request: Request) -> ProcessMessageUseCase:
     """
-    Get LLM provider based on configuration.
+    Get ProcessMessageUseCase instance with dependencies injected.
     
+    This function uses the composition root to resolve all dependencies,
+    ensuring proper dependency inversion and centralized composition.
+    
+    Args:
+        request: FastAPI request for correlation ID extraction.
+        
     Returns:
-        An instance of LLMPort implementation.
+        ProcessMessageUseCase instance with dependencies injected.
     """
-    provider_name = settings.llm_provider.lower()
-    
-    if provider_name == "openai":
-        return OpenAIProvider(
-            api_key=settings.openai_api_key,
-            model=settings.openai_model
-        )
-    elif provider_name == "bedrock":
-        return BedrockProvider(
-            model_id=settings.bedrock_model_id,
-            region=settings.aws_region
-        )
-    else:
-        return MockProvider()
-
-
-def get_repository():
-    """
-    Get repository instance.
-    
-    Returns:
-        An instance of RepositoryPort implementation.
-    """
-    return InMemoryRepository()
-
-
-def get_chat_service() -> ChatService:
-    """
-    Get chat service instance with dependencies injected.
-    
-    Returns:
-        ChatService instance.
-    """
-    llm = get_llm_provider()
-    repository = get_repository()
-    return ChatService(llm=llm, repository=repository)
+    container = get_container()
+    return container.get_process_message_use_case(request)
 

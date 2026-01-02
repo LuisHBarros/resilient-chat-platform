@@ -12,6 +12,14 @@ class Conversation:
     
     Entities have identity and lifecycle. This entity aggregates messages
     and maintains conversation state.
+    
+    Business Invariants:
+    - A conversation must always have a user_id (non-empty string)
+    - Messages are ordered chronologically (by timestamp)
+    - A conversation cannot have duplicate messages (same content, role, and timestamp)
+    - The conversation ID is immutable once set
+    - Messages can only be added, never removed (immutable history)
+    - created_at must be <= updated_at at all times
     """
     user_id: str
     id: Optional[str] = None

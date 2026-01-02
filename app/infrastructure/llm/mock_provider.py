@@ -2,7 +2,7 @@
 from app.domain.ports.llm_port import LLMPort
 
 
-class MockProvider:
+class MockProvider(LLMPort):
     """
     Mock LLM implementation that echoes the input message.
     

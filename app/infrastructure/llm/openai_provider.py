@@ -4,7 +4,7 @@ from typing import Optional
 from app.domain.ports.llm_port import LLMPort
 
 
-class OpenAIProvider:
+class OpenAIProvider(LLMPort):
     """
     OpenAI LLM implementation using the OpenAI API.
     

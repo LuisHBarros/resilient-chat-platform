@@ -10,6 +10,13 @@ class Message:
     Value object representing a message in the conversation.
     
     Value objects are immutable and represent concepts from the domain.
+    
+    Business Invariants:
+    - Message content cannot be empty or only whitespace
+    - Role must be either 'user' or 'assistant' (no other values allowed)
+    - Timestamp is automatically set if not provided (current time)
+    - Once created, a message cannot be modified (immutability)
+    - Content must be a non-empty string with at least one non-whitespace character
     """
     content: str
     role: str = "user"  # 'user' or 'assistant'

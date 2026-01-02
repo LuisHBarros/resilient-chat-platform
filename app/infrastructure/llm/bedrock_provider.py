@@ -5,7 +5,7 @@ from typing import Optional
 from app.domain.ports.llm_port import LLMPort
 
 
-class BedrockProvider:
+class BedrockProvider(LLMPort):
     """
     AWS Bedrock LLM implementation.
     

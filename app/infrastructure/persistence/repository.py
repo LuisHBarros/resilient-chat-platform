@@ -9,7 +9,7 @@ from app.domain.value_objects.message import Message
 from app.infrastructure.persistence.models import ConversationModel, Base
 
 
-class InMemoryRepository:
+class InMemoryRepository(RepositoryPort):
     """
     In-memory repository implementation for development and testing.
     
