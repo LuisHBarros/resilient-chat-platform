@@ -13,10 +13,11 @@ from app.domain.ports.llm_port import LLMPort
 from app.domain.ports.repository_port import RepositoryPort
 from app.domain.ports.logger_port import LoggerPort
 from app.application.use_cases.process_message import ProcessMessageUseCase
+from app.application.use_cases.stream_message import StreamMessageUseCase
 
 # Infrastructure implementations
 from app.infrastructure.llm.factory import create_llm_provider
-from app.infrastructure.persistence import InMemoryRepository
+from app.infrastructure.persistence import InMemoryRepository, PostgresRepository
 from app.infrastructure.logging import StructuredLogger, NullLogger
 from app.infrastructure.config.settings import settings
 
@@ -52,11 +53,17 @@ class ApplicationContainer:
         """
         Get repository instance (singleton).
         
+        Uses PostgresRepository if DATABASE_URL is configured,
+        otherwise falls back to InMemoryRepository.
+        
         Returns:
             Repository implementing RepositoryPort.
         """
         if self._repository is None:
-            self._repository = InMemoryRepository()
+            if settings.database_url:
+                self._repository = PostgresRepository()
+            else:
+                self._repository = InMemoryRepository()
         return self._repository
     
     def get_logger(self, request: Optional[Request] = None) -> LoggerPort:
@@ -103,6 +110,33 @@ class ApplicationContainer:
         logger = self.get_logger(request)
         
         return ProcessMessageUseCase(
+            llm=llm,
+            repository=repository,
+            logger=logger
+        )
+    
+    def get_stream_message_use_case(
+        self,
+        request: Optional[Request] = None
+    ) -> StreamMessageUseCase:
+        """
+        Get StreamMessageUseCase with all dependencies injected.
+        
+        This method wires up the streaming use case with its dependencies.
+        Use case is created per-request to ensure logger has correct
+        correlation ID.
+        
+        Args:
+            request: Optional FastAPI request for correlation ID.
+            
+        Returns:
+            StreamMessageUseCase instance with dependencies injected.
+        """
+        llm = self.get_llm()
+        repository = self.get_repository()
+        logger = self.get_logger(request)
+        
+        return StreamMessageUseCase(
             llm=llm,
             repository=repository,
             logger=logger

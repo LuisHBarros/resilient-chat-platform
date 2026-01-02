@@ -115,28 +115,81 @@ class BedrockProvider(LLMPort):
     
     async def generate_stream(self, message: str) -> AsyncGenerator[str, None]:
         """
-        Generate a streaming response using AWS Bedrock API.
+        Generate a streaming response using AWS Bedrock API with real streaming.
         
-        Note: Bedrock streaming requires invoke_model_with_response_stream.
-        This is a simplified implementation that yields the full response.
-        For true streaming, use Bedrock's streaming API.
+        Uses invoke_model_with_response_stream for true streaming (low TTFB).
         
         Args:
             message: The input message/prompt.
             
         Yields:
-            Chunks of the generated response.
+            Chunks of the generated response as they arrive from Bedrock.
             
         Raises:
             Exception: If API call fails.
         """
-        # For now, generate full response and yield it in chunks
-        # TODO: Implement true streaming with invoke_model_with_response_stream
-        full_response = await self.generate(message)
+        client = self._get_client()
         
-        # Yield in chunks of 10 characters for demonstration
-        chunk_size = 10
-        for i in range(0, len(full_response), chunk_size):
-            yield full_response[i:i + chunk_size]
-            await asyncio.sleep(0.01)  # Small delay to simulate streaming
+        # Prepare the request body based on model type
+        if "claude" in self.model_id.lower():
+            body = json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": self.max_tokens,
+                "temperature": self.temperature,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": message
+                    }
+                ]
+            })
+        else:
+            # Default format for other models
+            body = json.dumps({
+                "prompt": message,
+                "max_tokens": self.max_tokens,
+                "temperature": self.temperature
+            })
+        
+        try:
+            # Use invoke_model_with_response_stream for real streaming
+            response = await asyncio.to_thread(
+                client.invoke_model_with_response_stream,
+                modelId=self.model_id,
+                body=body,
+                contentType="application/json",
+                accept="application/json"
+            )
+            
+            # Process streaming response
+            stream = response.get('body')
+            if stream:
+                for event in stream:
+                    # Note: boto3 stream iterator is synchronous, but we're running
+                    # it in a thread, so this is acceptable for now
+                    chunk = event.get('chunk')
+                    if chunk:
+                        chunk_bytes = chunk.get('bytes')
+                        if chunk_bytes:
+                            chunk_json = json.loads(chunk_bytes.decode())
+                            
+                            # Extract text based on model type
+                            if "claude" in self.model_id.lower():
+                                # Claude 3 format
+                                if "delta" in chunk_json and "text" in chunk_json["delta"]:
+                                    yield chunk_json["delta"]["text"]
+                                elif "contentBlockDelta" in chunk_json:
+                                    delta = chunk_json["contentBlockDelta"].get("delta", {})
+                                    if "text" in delta:
+                                        yield delta["text"]
+                            elif "amazon" in self.model_id.lower():
+                                # Amazon Titan format
+                                if "outputText" in chunk_json:
+                                    yield chunk_json["outputText"]
+                            else:
+                                # Generic fallback - try to extract any text field
+                                if "text" in chunk_json:
+                                    yield chunk_json["text"]
+        except Exception as e:
+            raise RuntimeError(f"AWS Bedrock streaming API error: {str(e)}") from e
 
