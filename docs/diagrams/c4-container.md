@@ -9,8 +9,9 @@
 │  ┌──────────────────────────────────────────────────────────────┐  │
 │  │                    API Layer (FastAPI)                        │  │
 │  │  - Routes & Endpoints                                          │  │
+│  │  - Streaming Endpoints (SSE)                                  │  │
 │  │  - DTOs (Request/Response)                                     │  │
-│  │  - Middleware (Correlation ID)                                │  │
+│  │  - Middleware (Correlation ID, CORS)                          │  │
 │  │  - Dependency Injection                                       │  │
 │  └──────────────┬───────────────────────────────────────────────┘  │
 │                 │                                                    │
@@ -18,7 +19,9 @@
 │                 ▼                                                    │
 │  ┌──────────────────────────────────────────────────────────────┐  │
 │  │              Application Layer                                 │  │
-│  │  - Use Cases (ProcessMessageUseCase)                          │  │
+│  │  - Use Cases                                                  │  │
+│  │    • ProcessMessageUseCase (non-streaming)                    │  │
+│  │    • StreamMessageUseCase (SSE streaming)                     │  │
 │  │  - Application Services                                       │  │
 │  │  - Application Exceptions                                     │  │
 │  └──────────────┬───────────────────────────────────────────────┘  │
@@ -40,12 +43,17 @@
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │  │
 │  │  │ LLM Adapters │  │ Repository   │  │   Logging     │       │  │
 │  │  │ - OpenAI     │  │ - InMemory   │  │ - Structured   │       │  │
-│  │  │ - Bedrock    │  │              │  │   Logger      │       │  │
+│  │  │   • GPT-5    │  │              │  │   Logger      │       │  │
+│  │  │   • GPT-4    │  │              │  │               │       │  │
+│  │  │   • Fallback │  │              │  │               │       │  │
+│  │  │ - Bedrock    │  │              │  │               │       │  │
 │  │  │ - Mock       │  │              │  │               │       │  │
 │  │  └──────────────┘  └──────────────┘  └──────────────┘       │  │
 │  │  ┌──────────────┐                                             │  │
 │  │  │  Config      │                                             │  │
 │  │  │  Settings    │                                             │  │
+│  │  │  - CORS      │                                             │  │
+│  │  │  - Fallback  │                                             │  │
 │  │  └──────────────┘                                             │  │
 │  └───────────────────────────────────────────────────────────────┘  │
 │                                                                       │
@@ -64,16 +72,20 @@
 **Technology**: FastAPI, Python  
 **Responsibilities**:
 - Handle HTTP requests/responses
+- Handle streaming responses (Server-Sent Events)
 - Validate input via DTOs
 - Route requests to use cases
 - Handle exceptions and return appropriate HTTP status codes
 - Add correlation IDs via middleware
+- Configure CORS for frontend communication
 
 **Key Components**:
-- `app/api/routes/` - API endpoints
+- `app/api/routes/chat_routes.py` - Non-streaming endpoints
+- `app/api/routes/chat_stream_routes.py` - Streaming endpoints (SSE)
 - `app/api/dto/` - Data Transfer Objects
-- `app/api/middleware/` - Request middleware
+- `app/api/middleware/` - Request middleware (Correlation ID, CORS)
 - `app/api/dependencies.py` - FastAPI dependency injection
+- `app/main.py` - CORS configuration
 
 ### 2. Application Layer
 **Technology**: Python  
@@ -82,9 +94,11 @@
 - Coordinate domain entities and value objects
 - Handle application-level business logic
 - Manage transaction boundaries
+- Stream responses in real-time
 
 **Key Components**:
-- `app/application/use_cases/` - Use case implementations
+- `app/application/use_cases/process_message.py` - Non-streaming message processing
+- `app/application/use_cases/stream_message.py` - Streaming message processing (SSE)
 - `app/application/exceptions.py` - Application exceptions
 
 ### 3. Domain Layer
@@ -108,12 +122,16 @@
 - Handle external service integrations
 - Manage configuration
 - Provide logging and observability
+- Implement fallback mechanisms
+- Handle different OpenAI API formats (responses vs chat.completions)
 
 **Key Components**:
-- `app/infrastructure/llm/` - LLM provider implementations
+- `app/infrastructure/llm/openai_provider.py` - OpenAI provider with fallback chain
+- `app/infrastructure/llm/bedrock_provider.py` - AWS Bedrock provider
+- `app/infrastructure/llm/mock_provider.py` - Mock provider for testing
 - `app/infrastructure/persistence/` - Repository implementations
 - `app/infrastructure/logging/` - Logging implementations
-- `app/infrastructure/config/` - Configuration management
+- `app/infrastructure/config/` - Configuration management (CORS, fallback, etc.)
 
 ### 5. Composition Root (bootstrap.py)
 **Technology**: Python  
@@ -125,6 +143,7 @@
 
 ## Data Flow
 
+### Non-Streaming Flow:
 1. **Request** → API Layer receives HTTP request
 2. **Validation** → DTO validates input
 3. **Dependency Injection** → FastAPI injects use case via composition root
@@ -132,6 +151,15 @@
 5. **Domain Logic** → Domain entities enforce business rules
 6. **Infrastructure** → Adapters call external services (LLM, DB)
 7. **Response** → Result flows back through layers to API response
+
+### Streaming Flow (SSE):
+1. **Request** → API Layer receives HTTP POST to `/message/stream`
+2. **Validation** → DTO validates input
+3. **Streaming Response** → FastAPI creates `StreamingResponse` with SSE format
+4. **Use Case Execution** → `StreamMessageUseCase` yields chunks as they're generated
+5. **LLM Streaming** → LLM provider streams response chunks (with fallback if needed)
+6. **SSE Events** → Each chunk sent as `data: {json}\n\n`
+7. **Persistence** → User message saved immediately, assistant message saved after streaming
 
 ## Technology Choices
 

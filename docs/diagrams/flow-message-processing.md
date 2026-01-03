@@ -104,10 +104,16 @@ User          API Layer        Use Case        Domain        Infrastructure
 - `ConfigurationError`: Configuration invalid
 
 ### HTTP Status Codes
-- `200 OK`: Success
+- `200 OK`: Success (or StreamingResponse for SSE)
 - `400 Bad Request`: Application error (validation, etc.)
 - `500 Internal Server Error`: Repository error
 - `503 Service Unavailable`: LLM or infrastructure error
+
+### Streaming Error Handling
+- Errors sent as SSE events: `data: {"error": "...", "type": "error"}\n\n`
+- Error state saved to conversation for debugging
+- Streaming continues (sends error event) instead of crashing
+- Fallback mechanism automatically tries alternative models
 
 ## Logging Points
 
