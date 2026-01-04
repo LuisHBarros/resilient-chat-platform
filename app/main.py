@@ -6,7 +6,6 @@ from app.infrastructure.config.validation import validate_configuration
 from app.api.routes import chat_router
 from app.api.routes import chat_stream_routes
 from app.api.routes import health_routes
-from app.api.routes import magic_link
 from app.api.middleware.correlation import CorrelationIDMiddleware
 from app.infrastructure.exceptions import ConfigurationError
 from app.infrastructure.cache.redis_client import close_cache_client
@@ -186,6 +185,5 @@ app.add_middleware(CorrelationIDMiddleware)
 app.include_router(chat_router, prefix=settings.api_prefix)
 app.include_router(chat_stream_routes.router, prefix=settings.api_prefix)
 app.include_router(health_routes.router)
-app.include_router(magic_link.router, prefix=settings.api_prefix)
 
 # Root health check is now handled by health_routes
