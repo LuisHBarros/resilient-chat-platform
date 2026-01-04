@@ -90,10 +90,10 @@ async def readiness_check():
     try:
         repository = container.get_repository()
         
-        # Test real database connectivity
-        # For PostgresRepository, use the connection test method
-        if hasattr(repository, "_test_connection"):
-            is_healthy = await repository._test_connection()
+        # Test real database connectivity using the check_health method
+        # This follows Clean Architecture by using the port interface
+        try:
+            is_healthy = await repository.check_health()
             if is_healthy:
                 checks["checks"]["repository"] = {"status": "healthy"}
             else:
@@ -102,11 +102,13 @@ async def readiness_check():
                     "error": "Database connection test failed"
                 }
                 all_healthy = False
-        else:
-            # For InMemoryRepository, just verify it's initialized
-            # Try a simple operation
-            await repository.find_by_id("health-check-test-id")
-            checks["checks"]["repository"] = {"status": "healthy"}
+        except Exception as health_error:
+            # If check_health raises an exception, repository is unhealthy
+            checks["checks"]["repository"] = {
+                "status": "unhealthy",
+                "error": f"Health check failed: {str(health_error)}"
+            }
+            all_healthy = False
     except Exception as e:
         # If it's a "not found" error, that's fine - repository is working
         error_str = str(e).lower()

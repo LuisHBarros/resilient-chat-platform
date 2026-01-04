@@ -142,4 +142,16 @@ class InMemoryRepository(RepositoryPort):
         )
         
         return conversation
+    
+    async def check_health(self) -> bool:
+        """
+        Check repository health.
+        
+        For InMemoryRepository, this always returns True as there's no
+        external dependency to check.
+        
+        Returns:
+            True (always healthy for in-memory storage).
+        """
+        return True
 

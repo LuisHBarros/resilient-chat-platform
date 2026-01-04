@@ -3,6 +3,7 @@ import os
 import time
 from typing import Optional, AsyncGenerator, List
 from app.domain.ports.llm_port import LLMPort
+from app.domain.exceptions import LLMError
 from app.infrastructure.config.settings import settings
 
 # OpenTelemetry tracing
@@ -231,11 +232,15 @@ class OpenAIProvider(LLMPort):
                         if output_text:
                             break
         
-        # Normalize to string: if it's a list, join it; if it's None, use empty string
+        # Normalize to string: if it's a list, join it; if it's None, raise exception
         if output_text is None:
             if logger:
-                logger.warning("Could not extract text from response - all extraction methods failed")
-            return ""
+                logger.error("Could not extract text from response - all extraction methods failed")
+            # Raise exception to trigger fallback mechanism instead of returning empty string
+            raise LLMError(
+                "Failed to extract text from LLM response. Response format may be unexpected. "
+                "This will trigger fallback to alternative model if configured."
+            )
         elif isinstance(output_text, list):
             # If it's a list, join the elements (assuming they're strings or can be converted)
             result = " ".join(str(item) for item in output_text if item)

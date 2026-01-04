@@ -103,6 +103,19 @@ class StreamMessageUseCase:
                     )
                 conversation = Conversation(user_id=user_id)
                 # Note: The conversation will get a new ID when saved, ignoring the provided one
+            else:
+                # SECURITY: Verify that the conversation belongs to the authenticated user
+                if conversation.user_id != user_id:
+                    if self.logger:
+                        self.logger.warning(
+                            "Access denied: conversation belongs to different user",
+                            conversation_id=conversation_id,
+                            conversation_user_id=conversation.user_id,
+                            authenticated_user_id=user_id
+                        )
+                    raise RepositoryError(
+                        f"Conversation {conversation_id} does not belong to user {user_id}"
+                    )
         else:
             conversation = Conversation(user_id=user_id)
         

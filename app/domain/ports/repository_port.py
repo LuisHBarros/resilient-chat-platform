@@ -70,4 +70,19 @@ class RepositoryPort(Protocol):
             RepositoryError: If the delete operation fails.
         """
         ...
+    
+    async def check_health(self) -> bool:
+        """
+        Check repository health/connectivity.
+        
+        This method verifies that the repository can connect to its underlying
+        storage (database, cache, etc.). Used for health checks and readiness probes.
+        
+        Returns:
+            True if repository is healthy and can connect, False otherwise.
+            
+        Raises:
+            RepositoryError: If health check fails unexpectedly.
+        """
+        ...
 

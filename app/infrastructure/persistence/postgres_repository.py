@@ -59,12 +59,18 @@ class PostgresRepository(RepositoryPort):
             expire_on_commit=False
         )
     
-    async def _test_connection(self) -> bool:
+    async def check_health(self) -> bool:
         """
-        Test database connection by executing a simple query.
+        Check repository health by testing database connectivity.
+        
+        This method verifies that the repository can connect to PostgreSQL
+        by executing a simple query. Used for health checks and readiness probes.
         
         Returns:
-            True if connection is healthy, False otherwise.
+            True if database connection is healthy, False otherwise.
+            
+        Raises:
+            RepositoryError: If health check fails unexpectedly.
         """
         try:
             async with self.async_session() as session:
