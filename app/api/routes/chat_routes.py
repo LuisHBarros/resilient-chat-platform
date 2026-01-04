@@ -19,9 +19,11 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 async def send_message(
     payload: MessageRequestDTO,
     request: Request,
-    user_id: str = Depends(get_authenticated_user_id),
-    _: None = Depends(check_rate_limit),  # Rate limiting (uses user_id from above)
-    use_case: ProcessMessageUseCase = Depends(get_process_message_use_case)
+    # Dependencies are resolved in order: FastAPI ensures get_authenticated_user_id
+    # executes before check_rate_limit, which depends on user_id
+    user_id: str = Depends(get_authenticated_user_id),  # 1. Authenticate first
+    _: None = Depends(check_rate_limit),  # 2. Then rate limit (depends on user_id)
+    use_case: ProcessMessageUseCase = Depends(get_process_message_use_case)  # 3. Finally use case
 ):
     """
     Send a message and get AI response.
