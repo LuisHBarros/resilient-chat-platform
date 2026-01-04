@@ -35,6 +35,7 @@ ADRs document important architectural decisions, their context, and consequences
 
 ## Quick Links
 
+- [API Documentation](./API.md) - Documentação completa da API REST
 - [Architecture Decisions](./adr/README.md)
 - [System Context](./diagrams/c4-context.md)
 - [Container Architecture](./diagrams/c4-container.md)

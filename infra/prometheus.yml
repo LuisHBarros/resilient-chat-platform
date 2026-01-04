@@ -1,0 +1,40 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'backend-ia-monitor'
+
+# Configuração de alertas (opcional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: []
+
+# Regras de alerta (opcional)
+# rule_files:
+#   - "alert_rules.yml"
+
+# Configuração de scraping
+scrape_configs:
+  # Métricas do próprio Prometheus
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Métricas da aplicação FastAPI (quando implementar)
+  - job_name: 'chat-api'
+    static_configs:
+      - targets: ['chat-api:8000']
+    metrics_path: '/metrics'  # Endpoint de métricas (a ser implementado)
+    scrape_interval: 10s
+
+  # Métricas do Redis (requer redis_exporter)
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis-exporter:9121']
+
+  # Métricas do PostgreSQL (requer postgres_exporter)
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres-exporter:9187']
+

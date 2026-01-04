@@ -1,0 +1,183 @@
+version: '3.8'
+
+services:
+  # ---------------------------
+  # 1. Aplicação Principal
+  # ---------------------------
+  chat-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend-ia-app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-pass}@db:5432/chat_db
+      - REDIS_URL=redis://redis:6379/0
+      - KEYCLOAK_URL=http://keycloak:8080
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - LLM_PROVIDER=${LLM_PROVIDER:-mock}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      keycloak:
+        condition: service_started
+    networks:
+      - backend-network
+    restart: unless-stopped
+
+  # ---------------------------
+  # 2. Camada de Dados
+  # ---------------------------
+  db:
+    # Usamos a imagem pgvector para ter suporte a IA nativo no banco
+    image: pgvector/pgvector:pg16
+    container_name: backend-ia-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pass}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}  # Database padrão para inicialização
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Script para criar múltiplos bancos na inicialização
+      - ./infra/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    ports:
+      - "5432:5432"
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: backend-ia-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------------------------
+  # 3. Autenticação (Identity)
+  # ---------------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: backend-ia-auth
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/keycloak_db
+      KC_DB_USERNAME: ${POSTGRES_USER:-user}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-pass}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HTTP_RELATIVE_PATH: /
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend-network
+    restart: unless-stopped
+
+  # ---------------------------
+  # 4. Observabilidade (Ouro para Sênior)
+  # ---------------------------
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: backend-ia-jaeger
+    ports:
+      - "16686:16686" # UI do Jaeger
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+    networks:
+      - backend-network
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: backend-ia-prometheus
+    volumes:
+      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - backend-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: backend-ia-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - backend-network
+    restart: unless-stopped
+
+  # ---------------------------
+  # 5. Reverse Proxy / API Gateway (Opcional mas Recomendado)
+  # ---------------------------
+  traefik:
+    image: traefik:v2.11
+    container_name: backend-ia-traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8081:8080"  # Dashboard do Traefik
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - backend-network
+    depends_on:
+      - chat-api
+      - keycloak
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chat-api.rule=Host(`localhost`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.chat-api.entrypoints=web"
+      - "traefik.http.services.chat-api.loadbalancer.server.port=8000"
+      - "traefik.http.routers.keycloak.rule=Host(`localhost`) && PathPrefix(`/auth`)"
+      - "traefik.http.routers.keycloak.entrypoints=web"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  backend-network:
+    driver: bridge
+
