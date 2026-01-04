@@ -16,18 +16,15 @@ class MessageRequestDTO(BaseModel):
     DTO for message request.
     
     This DTO validates and structures incoming message requests from clients.
+    
+    Note: user_id is no longer accepted in the request body. It is automatically
+    extracted from the JWT token in the Authorization header.
     """
     message: str = Field(
         ...,
         min_length=1,
         max_length=10000,
         description="The message content (1-10000 characters)"
-    )
-    user_id: Optional[str] = Field(
-        None,
-        min_length=1,
-        max_length=100,
-        description="User identifier (optional, defaults to 'default_user')"
     )
     conversation_id: Optional[str] = Field(
         None,
@@ -54,7 +51,6 @@ class MessageRequestDTO(BaseModel):
         schema_extra = {
             "example": {
                 "message": "Hello, how are you?",
-                "user_id": "user-123",
                 "conversation_id": "conv-456",
                 "model_id": "gpt-4"
             }

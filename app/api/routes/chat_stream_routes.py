@@ -2,7 +2,11 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from fastapi.responses import StreamingResponse
 from app.api.dto.chat_dto import MessageRequestDTO
-from app.api.dependencies import get_stream_message_use_case
+from app.api.dependencies import (
+    get_stream_message_use_case,
+    get_authenticated_user_id,
+    check_rate_limit
+)
 from app.application.use_cases.stream_message import StreamMessageUseCase
 from app.domain.exceptions import LLMError, RepositoryError
 from app.application.exceptions import ApplicationException
@@ -62,10 +66,16 @@ async def _format_sse_stream(use_case: StreamMessageUseCase, user_id: str, messa
 async def stream_message(
     payload: MessageRequestDTO,
     request: Request,
+    user_id: str = Depends(get_authenticated_user_id),
+    _: None = Depends(check_rate_limit),  # Rate limiting (returns None if passed)
     use_case: StreamMessageUseCase = Depends(get_stream_message_use_case)
 ):
     """
     Stream AI response using Server-Sent Events (SSE).
+    
+    This endpoint requires authentication via JWT token in the Authorization header.
+    The user ID is automatically extracted from the token - it should NOT be provided
+    in the request body.
     
     This endpoint:
     - Saves user message immediately
@@ -75,21 +85,22 @@ async def stream_message(
     This ensures data persistence while providing streaming UX.
     
     Args:
-        payload: The message request DTO.
+        payload: The message request DTO (without user_id).
         request: FastAPI request for correlation ID.
+        user_id: Authenticated user ID extracted from JWT token (injected via dependency).
         use_case: Injected StreamMessageUseCase.
         
     Returns:
         StreamingResponse with SSE-formatted chunks.
         
     Raises:
-        HTTPException: If use case setup fails (before streaming starts).
+        HTTPException: If authentication fails or use case setup fails (before streaming starts).
     """
     try:
         return StreamingResponse(
             _format_sse_stream(
                 use_case=use_case,
-                user_id=payload.user_id or "default_user",
+                user_id=user_id,
                 message=payload.message,
                 conversation_id=payload.conversation_id
             ),

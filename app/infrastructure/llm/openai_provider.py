@@ -5,6 +5,12 @@ from typing import Optional, AsyncGenerator, List
 from app.domain.ports.llm_port import LLMPort
 from app.infrastructure.config.settings import settings
 
+# OpenTelemetry tracing
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
+
+tracer = trace.get_tracer(__name__)
+
 
 class OpenAIProvider(LLMPort):
     """
@@ -260,47 +266,69 @@ class OpenAIProvider(LLMPort):
         Raises:
             Exception: If API call fails (authentication, rate limit, etc.).
         """
-        client = self._get_client()
-        
-        try:
-            # GPT-5 models use responses API, not chat.completions
-            if self.model.startswith("gpt-5"):
-                import logging
-                logger = logging.getLogger(__name__)
+        # Start tracing span for LLM generation
+        with tracer.start_as_current_span("OpenAIProvider.generate") as span:
+            span.set_attribute("llm.provider", "openai")
+            span.set_attribute("llm.model", self.model)
+            span.set_attribute("llm.input_length", len(message))
+            
+            client = self._get_client()
+            
+            try:
+                # GPT-5 models use responses API, not chat.completions
+                if self.model.startswith("gpt-5"):
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    
+                    max_tokens_for_model = self._get_max_tokens_for_model(self.model)
+                    span.set_attribute("llm.api", "responses")
+                    span.set_attribute("llm.max_output_tokens", max_tokens_for_model)
+                    logger.debug(f"Using max_output_tokens={max_tokens_for_model} for {self.model}")
+                    
+                    with tracer.start_as_current_span("openai.responses.create") as api_span:
+                        api_span.set_attribute("openai.model", self.model)
+                        response = await client.responses.create(
+                            model=self.model,
+                            input=message,
+                            max_output_tokens=max_tokens_for_model
+                        )
+                    
+                    # Debug: Log response structure
+                    logger.info(f"Response from {self.model}: type={type(response)}, dir={dir(response)}")
+                    if hasattr(response, '__dict__'):
+                        logger.info(f"Response attributes: {response.__dict__}")
+                    
+                    # Extract and normalize text from response
+                    output_text = self._extract_text_from_response(response, logger)
+                    span.set_attribute("llm.output_length", len(output_text))
+                    logger.info(f"Extracted output_text: {repr(output_text)}")
+                    return output_text
                 
-                max_tokens_for_model = self._get_max_tokens_for_model(self.model)
-                logger.debug(f"Using max_output_tokens={max_tokens_for_model} for {self.model}")
+                # Legacy models (gpt-3.5, gpt-4) use chat.completions
+                span.set_attribute("llm.api", "chat.completions")
+                completion_params = self._get_completion_params()
+                span.set_attribute("llm.max_tokens", self.max_tokens)
+                span.set_attribute("llm.temperature", self.temperature)
                 
-                response = await client.responses.create(
-                    model=self.model,
-                    input=message,
-                    max_output_tokens=max_tokens_for_model
-                )
+                with tracer.start_as_current_span("openai.chat.completions.create") as api_span:
+                    api_span.set_attribute("openai.model", self.model)
+                    response = await client.chat.completions.create(
+                        model=self.model,
+                        messages=[
+                            {"role": "system", "content": "You are a helpful assistant."},
+                            {"role": "user", "content": message}
+                        ],
+                        **completion_params
+                    )
                 
-                # Debug: Log response structure
-                logger.info(f"Response from {self.model}: type={type(response)}, dir={dir(response)}")
-                if hasattr(response, '__dict__'):
-                    logger.info(f"Response attributes: {response.__dict__}")
-                
-                # Extract and normalize text from response
-                output_text = self._extract_text_from_response(response, logger)
-                logger.info(f"Extracted output_text: {repr(output_text)}")
+                output_text = response.choices[0].message.content or ""
+                span.set_attribute("llm.output_length", len(output_text))
                 return output_text
-            
-            # Legacy models (gpt-3.5, gpt-4) use chat.completions
-            completion_params = self._get_completion_params()
-            response = await client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": message}
-                ],
-                **completion_params
-            )
-            
-            return response.choices[0].message.content or ""
-        except Exception as e:
-            raise RuntimeError(f"OpenAI API error: {str(e)}") from e
+                
+            except Exception as e:
+                span.record_exception(e)
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                raise RuntimeError(f"OpenAI API error: {str(e)}") from e
     
     async def _try_stream_with_model(self, model: str, message: str, client) -> AsyncGenerator[str, None]:
         """

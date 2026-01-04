@@ -33,11 +33,21 @@ class Settings(BaseSettings):
     # Redis Configuration
     redis_url: Optional[str] = None
     
+    # Rate Limiting Configuration
+    rate_limit_enabled: bool = True
+    rate_limit_requests_per_minute: int = 60  # Default: 60 requests per minute per user
+    rate_limit_window_seconds: int = 60  # Time window in seconds
+    
     # Keycloak Configuration
     keycloak_url: Optional[str] = None
+    keycloak_realm: str = "master"  # Default realm, should be configured per environment
+    keycloak_client_id: str = "chat-api"  # Client ID registered in Keycloak
     
     # OpenTelemetry Configuration
     otel_exporter_otlp_endpoint: Optional[str] = None
+    otel_service_name: str = "chat-api"  # Service name for tracing
+    otel_service_version: str = "1.0.0"  # Service version for tracing
+    otel_traces_enabled: bool = True  # Enable/disable tracing
     
     # API Configuration
     api_prefix: str = "/api/v1"
