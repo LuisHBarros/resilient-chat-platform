@@ -46,7 +46,6 @@
 │  │  │   • GPT-5    │  │              │  │   Logger      │       │  │
 │  │  │   • GPT-4    │  │              │  │               │       │  │
 │  │  │   • Fallback │  │              │  │               │       │  │
-│  │  │ - Bedrock    │  │              │  │               │       │  │
 │  │  │ - Mock       │  │              │  │               │       │  │
 │  │  └──────────────┘  └──────────────┘  └──────────────┘       │  │
 │  │  ┌──────────────┐                                             │  │
@@ -127,7 +126,6 @@
 
 **Key Components**:
 - `app/infrastructure/llm/openai_provider.py` - OpenAI provider with fallback chain
-- `app/infrastructure/llm/bedrock_provider.py` - AWS Bedrock provider
 - `app/infrastructure/llm/mock_provider.py` - Mock provider for testing
 - `app/infrastructure/persistence/` - Repository implementations
 - `app/infrastructure/logging/` - Logging implementations

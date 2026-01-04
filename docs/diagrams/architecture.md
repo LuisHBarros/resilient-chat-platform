@@ -27,7 +27,7 @@
 │        - Ports (LLMPort, RepositoryPort)   │
 ├─────────────────────────────────────────────┤
 │    Infrastructure Layer                     │  ← AWS, DB, LLM
-│    - LLM Providers (OpenAI, Bedrock)       │
+│    - LLM Providers (OpenAI)                │
 │      • Fallback Chain                       │
 │      • Streaming Support                    │
 │    - Repository (InMemory)                 │
@@ -36,5 +36,5 @@
                    │
         ┌──────────┼──────────┐
         ▼          ▼          ▼
-   OpenAI API  Bedrock API  Database
-   (GPT-5/4/3)              (Future)
+   OpenAI API  Database  (Future)
+   (GPT-5/4/3)

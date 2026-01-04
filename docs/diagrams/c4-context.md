@@ -34,8 +34,8 @@
         │              │              │
         ▼              ▼              ▼
 ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│   OpenAI    │ │ AWS Bedrock │ │   Database  │
-│     API     │ │     API     │ │  (Future)   │
+│   OpenAI    │ │   Database  │ │   (Future)  │
+│     API     │ │  (Future)  │ │             │
 │ - GPT-5     │ │             │ │             │
 │ - GPT-4     │ │             │ │             │
 │ - GPT-3.5   │ │             │ │             │
@@ -55,8 +55,7 @@ Users interact with the platform through a web interface that provides a ChatGPT
 
 1. **Users**: Web browser users and API consumers
 2. **OpenAI API**: External LLM provider with multiple models (GPT-5, GPT-4, GPT-3.5)
-3. **AWS Bedrock API**: External LLM provider (optional, configured via settings)
-4. **Database**: Future persistence layer (currently using in-memory storage)
+3. **Database**: Future persistence layer (currently using in-memory storage)
 
 ### Key Characteristics
 

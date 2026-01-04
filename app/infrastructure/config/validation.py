@@ -25,20 +25,10 @@ def validate_configuration():
                 "Set it as an environment variable or in .env file."
             )
     
-    elif provider == "bedrock":
-        if not settings.aws_region:
-            errors.append(
-                "AWS_REGION is required when LLM_PROVIDER=bedrock. "
-                "Set it as an environment variable or in .env file."
-            )
-        # Note: AWS credentials are typically provided via IAM role,
-        # AWS CLI, or environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
-        # We don't validate them here as they may be provided via IAM role
-    
-    elif provider not in ["openai", "bedrock", "mock"]:
+    elif provider not in ["openai", "mock"]:
         errors.append(
             f"Invalid LLM_PROVIDER: {provider}. "
-            "Supported values: 'openai', 'bedrock', 'mock'"
+            "Supported values: 'openai', 'mock'"
         )
     
     # Validate database configuration (if provided)

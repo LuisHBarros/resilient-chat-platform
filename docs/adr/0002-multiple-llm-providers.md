@@ -16,7 +16,6 @@ We implemented a provider-agnostic architecture using the Port pattern:
 1. **Domain Port**: `LLMPort` protocol defines the interface
 2. **Multiple Implementations**: 
    - `OpenAIProvider` (OpenAI API)
-   - `BedrockProvider` (AWS Bedrock)
    - `MockProvider` (for testing/development)
 3. **Factory Pattern**: `create_llm_provider()` in infrastructure layer
 4. **Configuration-based**: Provider selected via `LLM_PROVIDER` environment variable
@@ -26,9 +25,8 @@ We implemented a provider-agnostic architecture using the Port pattern:
 Domain (Port)          Infrastructure (Adapters)
 ┌─────────────┐       ┌─────────────────┐
 │  LLMPort    │◄──────│ OpenAIProvider │
-│  Protocol   │       │ BedrockProvider│
-└─────────────┘       │ MockProvider   │
-                       └─────────────────┘
+│  Protocol   │       │ MockProvider   │
+└─────────────┘       └─────────────────┘
 ```
 
 ## Consequences

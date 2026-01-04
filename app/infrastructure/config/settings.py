@@ -15,8 +15,6 @@ class Settings(BaseSettings):
     llm_provider: str = "mock"
     openai_api_key: Optional[str] = None
     openai_model: str = "gpt-3.5-turbo"
-    aws_region: str = "us-east-1"
-    bedrock_model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0"
     
     # LLM Fallback Configuration
     llm_fallback_enabled: bool = True

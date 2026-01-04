@@ -6,7 +6,7 @@ class LLMPort(Protocol):
     Protocol defining the interface for Large Language Model (LLM) implementations.
     
     This port follows the Hexagonal Architecture pattern, allowing the domain layer
-    to remain independent of specific LLM provider implementations (OpenAI, Bedrock, etc.).
+    to remain independent of specific LLM provider implementations (OpenAI, etc.).
     
     Any class implementing this protocol must provide:
     - An async generate method that returns a complete response string

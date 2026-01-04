@@ -1,6 +1,7 @@
 """Structured logger implementation using Python's logging module."""
 import logging
 import json
+import os
 import logging.handlers
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -104,8 +105,9 @@ class StructuredLogger(LoggerPort):
                 # Log to console if file handler setup fails
                 self.logger.warning(f"Failed to setup file handler: {e}")
         
-        # CloudWatch handler (if AWS_REGION is set)
-        if settings.aws_region:
+        # CloudWatch handler (if AWS_REGION env var is set)
+        aws_region = getattr(settings, "aws_region", None) or os.getenv("AWS_REGION")
+        if aws_region:
             try:
                 # Try to import and setup CloudWatch handler
                 from watchtower import CloudWatchLogHandler

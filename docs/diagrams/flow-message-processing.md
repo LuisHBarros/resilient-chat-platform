@@ -78,7 +78,7 @@ User          API Layer        Use Case        Domain        Infrastructure
 - **Ports**: Define contracts for LLM and Repository
 
 ### 5. Infrastructure Layer
-- **LLM Adapter**: Calls external LLM API (OpenAI, Bedrock, or Mock)
+- **LLM Adapter**: Calls external LLM API (OpenAI or Mock)
 - **Repository**: Saves/loads conversations (currently in-memory)
 - **Logging**: Structured logs with correlation ID
 

@@ -6,7 +6,7 @@ used interchangeably.
 """
 import pytest
 from app.domain.ports.llm_port import LLMPort
-from app.infrastructure.llm import OpenAIProvider, BedrockProvider, MockProvider
+from app.infrastructure.llm import OpenAIProvider, MockProvider
 from tests.unit.fakes import FakeLLM
 
 
@@ -16,8 +16,8 @@ class TestLLMPortContract:
     @pytest.mark.parametrize("llm_class", [
         FakeLLM,
         MockProvider,
-        # Note: OpenAIProvider and BedrockProvider require API keys,
-        # so they're tested in integration tests
+        # Note: OpenAIProvider requires API keys,
+        # so it's tested in integration tests
     ])
     @pytest.mark.asyncio
     async def test_llm_implements_port(self, llm_class):
