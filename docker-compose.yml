@@ -12,7 +12,6 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-pass}@db:5432/chat_db
       - REDIS_URL=redis://redis:6379/0
-      - KEYCLOAK_URL=http://keycloak:8080
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
       - LLM_PROVIDER=${LLM_PROVIDER:-mock}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -20,8 +19,6 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
-      keycloak:
         condition: service_started
     networks:
       - backend-network
@@ -37,22 +34,15 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pass}
-      POSTGRES_DB: ${POSTGRES_DB:-postgres}  # Database padrão para inicialização
+      POSTGRES_DB: chat_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Script para criar múltiplos bancos na inicialização (primeira vez)
-      - ./infra/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
-      # Script que sempre verifica e cria bancos se necessário
-      - ./infra/always-init-db.sh:/always-init-db.sh
     ports:
       - "5432:5432"
     networks:
       - backend-network
     healthcheck:
-      # Verifica se PostgreSQL está pronto
-      # O script init-db.sh cria os bancos na primeira inicialização
-      # Se os bancos não existirem, execute manualmente: docker-compose exec db bash /docker-entrypoint-initdb.d/init-db.sh
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d chat_db"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -74,112 +64,7 @@ services:
     restart: unless-stopped
 
   # ---------------------------
-  # 3. Autenticação (Identity)
-  # ---------------------------
-  keycloak:
-    image: quay.io/keycloak/keycloak:23.0
-    container_name: backend-ia-auth
-    command: start-dev
-    environment:
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://db:5432/keycloak_db
-      KC_DB_USERNAME: ${POSTGRES_USER:-user}
-      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-pass}
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      KC_HTTP_RELATIVE_PATH: /
-      KC_HOSTNAME_STRICT: false
-      KC_HOSTNAME_STRICT_HTTPS: false
-    ports:
-      - "8080:8080"
-    depends_on:
-      db:
-        condition: service_healthy
-      db-init:
-        condition: service_completed_successfully
-    networks:
-      - backend-network
-    restart: unless-stopped
-
-  # Serviço auxiliar para configurar o cliente Keycloak
-  keycloak-init:
-    image: alpine:latest
-    container_name: backend-ia-keycloak-init
-    environment:
-      KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      KEYCLOAK_REALM: master
-      KEYCLOAK_CLIENT_ID: chat-api
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3001}
-    volumes:
-      - ./infra/setup-keycloak-client.sh:/setup-keycloak-client.sh:ro
-      - ./infra/enable-keycloak-registration.sh:/enable-keycloak-registration.sh:ro
-      - ./infra/setup-keycloak-smtp.sh:/setup-keycloak-smtp.sh:ro
-    entrypoint: /bin/sh
-    command:
-      - -c
-      - |
-        apk add --no-cache curl jq bash
-        echo "Setting up Keycloak..."
-        bash /setup-keycloak-client.sh
-        echo ""
-        bash /enable-keycloak-registration.sh
-        echo ""
-        bash /setup-keycloak-smtp.sh
-    depends_on:
-      keycloak:
-        condition: service_started
-    networks:
-      - backend-network
-    restart: "no"
-
-  # Serviço auxiliar para garantir que os bancos existam
-  db-init:
-    image: pgvector/pgvector:pg16
-    container_name: backend-ia-db-init
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pass}
-      POSTGRES_DB: ${POSTGRES_DB:-postgres}
-    volumes:
-      - ./infra/always-init-db.sh:/always-init-db.sh:ro
-    entrypoint: /bin/bash
-    command:
-      - -c
-      - |
-        set -e
-        echo "Waiting for PostgreSQL to be ready..."
-        # Aguardar PostgreSQL estar pronto
-        until pg_isready -h db -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-postgres}; do
-          echo "Waiting for PostgreSQL..."
-          sleep 2
-        done
-        
-        echo "PostgreSQL is ready. Creating databases..."
-        # Executar script para garantir que os bancos existam
-        export PGPASSWORD=${POSTGRES_PASSWORD:-pass}
-        bash /always-init-db.sh
-        
-        # Verificar se os bancos foram criados
-        echo "Verifying databases exist..."
-        export PGPASSWORD=${POSTGRES_PASSWORD:-pass}
-        until psql -h db -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-postgres} -tc "SELECT COUNT(*) FROM pg_database WHERE datname IN ('chat_db', 'keycloak_db')" | grep -q '2'; do
-          echo "Databases not ready yet, retrying..."
-          sleep 1
-          bash /always-init-db.sh
-        done
-        
-        echo "Database initialization completed successfully!"
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - backend-network
-    restart: "no"
-
-  # ---------------------------
-  # 4. Observabilidade (Ouro para Sênior)
+  # 3. Observabilidade
   # ---------------------------
   jaeger:
     image: jaegertracing/all-in-one:latest
@@ -225,7 +110,7 @@ services:
     restart: unless-stopped
 
   # ---------------------------
-  # 6. Email Testing (MailHog)
+  # 4. Email Testing (MailHog)
   # ---------------------------
   mailhog:
     image: mailhog/mailhog:latest
@@ -259,7 +144,6 @@ services:
       - backend-network
     depends_on:
       - chat-api
-      - keycloak
     restart: unless-stopped
     labels:
       - "traefik.enable=true"

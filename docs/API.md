@@ -41,12 +41,7 @@ Quando executado via Docker Compose, a API está disponível em:
 
 ## Autenticação
 
-⚠️ **Nota**: A autenticação via Keycloak está configurada na infraestrutura, mas ainda não está implementada nos endpoints. Os endpoints atualmente aceitam requisições sem autenticação.
-
-Quando implementada, a autenticação utilizará:
-- **Keycloak** como Identity Provider
-- **JWT tokens** no header `Authorization: Bearer <token>`
-- **OAuth 2.0 / OpenID Connect**
+⚠️ **Nota**: A autenticação ainda não está implementada nos endpoints. Os endpoints atualmente aceitam requisições sem autenticação.
 
 ## Endpoints
 
@@ -373,7 +368,6 @@ A API utiliza as seguintes variáveis de ambiente (configuradas no `docker-compo
 |----------|-----------|--------|
 | `DATABASE_URL` | URL de conexão do PostgreSQL | `postgresql+asyncpg://user:pass@db:5432/chat_db` |
 | `REDIS_URL` | URL de conexão do Redis | `redis://redis:6379/0` |
-| `KEYCLOAK_URL` | URL do Keycloak | `http://keycloak:8080` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Endpoint do Jaeger para tracing | `http://jaeger:4317` |
 | `LLM_PROVIDER` | Provedor LLM (`mock` ou `openai`) | `mock` |
 | `OPENAI_API_KEY` | Chave da API OpenAI | - |
@@ -392,7 +386,6 @@ chat-api:
   environment:
     - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/chat_db
     - REDIS_URL=redis://redis:6379/0
-    - KEYCLOAK_URL=http://keycloak:8080
     - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     - LLM_PROVIDER=${LLM_PROVIDER:-mock}
     - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -458,7 +451,7 @@ A API expõe documentação interativa via Swagger UI:
 ## Limitações e Considerações
 
 1. **Rate Limiting**: Não implementado ainda (será via Redis)
-2. **Autenticação**: Configurada na infraestrutura, mas não implementada nos endpoints
+2. **Autenticação**: Não implementada
 3. **Validação de Modelo**: O campo `model_id` é aceito, mas ainda não é utilizado
 4. **Tamanho de Mensagem**: Limitado a 10.000 caracteres
 5. **Timeout de Streaming**: 30 segundos (configurável via `LLM_STREAMING_TIMEOUT`)

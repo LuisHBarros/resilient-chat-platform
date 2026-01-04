@@ -18,15 +18,6 @@ else
     echo "Database chat_db already exists"
 fi
 
-# Criar banco keycloak_db se não existir
-DB_EXISTS=$(psql -h db --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -tAc "SELECT 1 FROM pg_database WHERE datname='keycloak_db'")
-if [ "$DB_EXISTS" != "1" ]; then
-    echo "Creating database keycloak_db..."
-    psql -v ON_ERROR_STOP=1 -h db --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -c "CREATE DATABASE keycloak_db;"
-else
-    echo "Database keycloak_db already exists"
-fi
-
 # Ativar extensão pgvector no banco chat_db (se não estiver ativada)
 echo "Ensuring pgvector extension on chat_db"
 psql -v ON_ERROR_STOP=1 -h db --username "$POSTGRES_USER" --dbname "chat_db" <<-EOSQL

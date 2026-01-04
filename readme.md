@@ -79,7 +79,6 @@ Consulte a [documentação completa da API](./docs/API.md) para detalhes.
 |----------|-----------|--------|
 | `DATABASE_URL` | URL do PostgreSQL | - |
 | `REDIS_URL` | URL do Redis | - |
-| `KEYCLOAK_URL` | URL do Keycloak | - |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Endpoint do Jaeger | - |
 | `LLM_PROVIDER` | Provedor LLM (`mock` ou `openai`) | `mock` |
 | `OPENAI_API_KEY` | Chave da API OpenAI | - |
