@@ -3,9 +3,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.infrastructure.config.settings import settings
 from app.infrastructure.config.validation import validate_configuration
-from app.api.routes import chat_router
+from app.api.routes import chat_router, auth_router
 from app.api.routes import chat_stream_routes
 from app.api.routes import health_routes
+from app.api.routes import conversation_routes
 from app.api.middleware.correlation import CorrelationIDMiddleware
 from app.infrastructure.exceptions import ConfigurationError
 from app.infrastructure.cache.redis_client import close_cache_client
@@ -164,11 +165,13 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:3001",
+        "http://localhost:3002",  # Added for frontend
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
+        "http://127.0.0.1:3002",  # Added for frontend
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],  # Only allow necessary HTTP methods
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],  # Only allow necessary HTTP methods
     allow_headers=[
         "Content-Type",
         "Authorization",
@@ -182,8 +185,10 @@ app.add_middleware(
 app.add_middleware(CorrelationIDMiddleware)
 
 # Include routers
+app.include_router(auth_router, prefix=settings.api_prefix)
 app.include_router(chat_router, prefix=settings.api_prefix)
 app.include_router(chat_stream_routes.router, prefix=settings.api_prefix)
+app.include_router(conversation_routes.router, prefix=settings.api_prefix)
 app.include_router(health_routes.router)
 
 # Root health check is now handled by health_routes

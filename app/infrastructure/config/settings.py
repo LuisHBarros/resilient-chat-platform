@@ -46,10 +46,8 @@ class Settings(BaseSettings):
     rate_limit_requests_per_minute: int = 60  # Default: 60 requests per minute per user
     rate_limit_window_seconds: int = 60  # Time window in seconds
     
-    # Keycloak Configuration
-    keycloak_url: Optional[str] = None
-    keycloak_realm: str = "master"  # Default realm, should be configured per environment
-    keycloak_client_id: str = "chat-api"  # Client ID registered in Keycloak
+    # JWT Authentication Configuration (for Magic Link Auth Service)
+    jwt_secret: Optional[str] = None  # Shared secret with auth-service for JWT validation
     
     # OpenTelemetry Configuration
     otel_exporter_otlp_endpoint: Optional[str] = None

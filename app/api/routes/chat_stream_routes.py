@@ -36,18 +36,34 @@ async def _format_sse_stream(use_case: StreamMessageUseCase, user_id: str, messa
         SSE-formatted chunks.
     """
     try:
+        # Track conversation_id - it will be set when conversation is saved
+        final_conversation_id = conversation_id
+        
         # Stream chunks from use case
         async for chunk in use_case.execute(
             user_id=user_id,
             message_content=message,
             conversation_id=conversation_id
         ):
+            # Check if this chunk contains conversation_id metadata
+            if isinstance(chunk, str) and chunk.startswith("__CONVERSATION_ID__:"):
+                final_conversation_id = chunk.replace("__CONVERSATION_ID__:", "")
+                # Send conversation_id as metadata event
+                metadata = json.dumps({"conversation_id": final_conversation_id})
+                yield f"data: {metadata}\n\n"
+                continue
+            
             # Format as SSE (Server-Sent Events)
             data = json.dumps({"chunk": chunk})
             yield f"data: {data}\n\n"
         
+        # Send completion event with conversation_id
+        completion_data = {"done": True}
+        if final_conversation_id:
+            completion_data["conversation_id"] = final_conversation_id
+        
         # Send completion event
-        yield f"data: {json.dumps({'done': True})}\n\n"
+        yield f"data: {json.dumps(completion_data)}\n\n"
     except LLMError as e:
         # Send error event
         error_data = json.dumps({"error": str(e), "type": "llm_error"})

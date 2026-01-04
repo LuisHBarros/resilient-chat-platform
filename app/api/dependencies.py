@@ -13,6 +13,7 @@ from app.infrastructure.auth.jwt_validator import get_jwt_validator, JWTValidati
 from app.infrastructure.cache.redis_client import get_cache_client
 from app.infrastructure.config.settings import settings
 from app.domain.ports.cache_port import CachePort
+from app.domain.ports.repository_port import RepositoryPort
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,15 +30,15 @@ def get_authenticated_user_id(
     
     This guard:
     1. Extracts the JWT from the Authorization: Bearer <token> header
-    2. Validates the token using Keycloak's public key
-    3. Extracts the user ID (sub claim) from the token
+    2. Validates the token using the shared JWT secret
+    3. Extracts the user ID (email) from the token
     4. Returns the user ID to be used in route handlers
     
     Args:
         credentials: HTTPAuthorizationCredentials containing the Bearer token.
         
     Returns:
-        The authenticated user ID (sub claim from JWT).
+        The authenticated user ID (email from JWT).
         
     Raises:
         HTTPException: If token is missing, invalid, or expired.
@@ -99,6 +100,19 @@ def get_stream_message_use_case(request: Request) -> StreamMessageUseCase:
     """
     container = get_container()
     return container.get_stream_message_use_case(request)
+
+
+def get_repository() -> RepositoryPort:
+    """
+    Get Repository instance with dependencies injected.
+    
+    This function uses the composition root to resolve the repository dependency.
+    
+    Returns:
+        RepositoryPort instance (PostgreSQL repository).
+    """
+    container = get_container()
+    return container.get_repository()
 
 
 async def check_rate_limit(user_id: str = Depends(get_authenticated_user_id)) -> None:

@@ -1,93 +1,93 @@
 # Backend IA Project - Chat Service
 
-Serviço de chat com IA construído com FastAPI, seguindo Clean Architecture e suportando múltiplos provedores de LLM.
+AI chat service built with FastAPI, following Clean Architecture and supporting multiple LLM providers.
 
-## 🚀 Início Rápido
+## 🚀 Quick Start
 
-### Com Docker Compose (Recomendado)
+### With Docker Compose (Recommended)
 
 ```bash
-# Na raiz do projeto
+# From project root
 docker-compose up -d chat-api
 ```
 
-### Desenvolvimento Local
+### Local Development
 
 ```bash
-# Criar ambiente virtual
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
-# ou
+# or
 venv\Scripts\activate  # Windows
 
-# Instalar dependências
+# Install dependencies
 pip install -r requirements.txt
 
-# Configurar variáveis de ambiente
+# Configure environment variables
 cp .env.example .env
-# Editar .env com suas configurações
+# Edit .env with your settings
 
-# Executar aplicação
+# Run application
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-A API estará disponível em: http://localhost:8000
+The API will be available at: http://localhost:8000
 
-## 📚 Documentação
+## 📚 Documentation
 
-- **[Documentação da API](./docs/API.md)** - Guia completo da API REST
-- **[Documentação Técnica](./docs/README.md)** - ADRs, diagramas e arquitetura
+- **[API Documentation](./docs/API.md)** - Complete REST API guide
+- **[Technical Documentation](./docs/README.md)** - ADRs, diagrams, and architecture
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
-## 🏗️ Arquitetura
+## 🏗️ Architecture
 
-O projeto segue **Clean Architecture** com as seguintes camadas:
+The project follows **Clean Architecture** with the following layers:
 
-- **Domain**: Entidades, Value Objects e Ports (interfaces)
-- **Application**: Casos de uso (use cases)
-- **Infrastructure**: Implementações concretas (LLM, DB, Logging)
-- **API**: Endpoints REST e DTOs
+- **Domain**: Entities, Value Objects, and Ports (interfaces)
+- **Application**: Use cases
+- **Infrastructure**: Concrete implementations (LLM, DB, Logging)
+- **API**: REST endpoints and DTOs
 
-### Principais Componentes
+### Main Components
 
-- **FastAPI**: Framework web
-- **SQLAlchemy (async)**: ORM para PostgreSQL
-- **Pydantic**: Validação de dados
-- **Alembic**: Migrações de banco de dados
-- **pgvector**: Extensão PostgreSQL para busca vetorial (RAG)
+- **FastAPI**: Web framework
+- **SQLAlchemy (async)**: ORM for PostgreSQL
+- **Pydantic**: Data validation
+- **Alembic**: Database migrations
+- **pgvector**: PostgreSQL extension for vector search (RAG)
 
-## 🔌 Endpoints Principais
+## 🔌 Main Endpoints
 
 ### Chat
 
-- `POST /api/v1/chat/message/stream` - Enviar mensagem com streaming SSE
-- `POST /api/v1/chat/message` - Enviar mensagem sem streaming
+- `POST /api/v1/chat/message/stream` - Send message with SSE streaming
+- `POST /api/v1/chat/message` - Send message without streaming
 
 ### Health
 
-- `GET /health` - Health check básico
-- `GET /health/ready` - Readiness check (verifica dependências)
+- `GET /health` - Basic health check
+- `GET /health/ready` - Readiness check (verifies dependencies)
 
-Consulte a [documentação completa da API](./docs/API.md) para detalhes.
+See the [complete API documentation](./docs/API.md) for details.
 
-## ⚙️ Configuração
+## ⚙️ Configuration
 
-### Variáveis de Ambiente
+### Environment Variables
 
-| Variável | Descrição | Padrão |
-|----------|-----------|--------|
-| `DATABASE_URL` | URL do PostgreSQL | - |
-| `REDIS_URL` | URL do Redis | - |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Endpoint do Jaeger | - |
-| `LLM_PROVIDER` | Provedor LLM (`mock` ou `openai`) | `mock` |
-| `OPENAI_API_KEY` | Chave da API OpenAI | - |
-| `OPENAI_MODEL` | Modelo OpenAI | `gpt-3.5-turbo` |
-| `LLM_FALLBACK_ENABLED` | Habilitar fallback | `true` |
-| `API_PREFIX` | Prefixo da API | `/api/v1` |
-| `DEBUG` | Modo debug | `false` |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL URL | - |
+| `REDIS_URL` | Redis URL | - |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Jaeger endpoint | - |
+| `LLM_PROVIDER` | LLM provider (`mock` or `openai`) | `mock` |
+| `OPENAI_API_KEY` | OpenAI API key | - |
+| `OPENAI_MODEL` | OpenAI model | `gpt-3.5-turbo` |
+| `LLM_FALLBACK_ENABLED` | Enable fallback | `true` |
+| `API_PREFIX` | API prefix | `/api/v1` |
+| `DEBUG` | Debug mode | `false` |
 
-### Exemplo de `.env`
+### Example `.env`
 
 ```env
 DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/chat_db
@@ -96,98 +96,98 @@ OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4
 ```
 
-## 🗄️ Banco de Dados
+## 🗄️ Database
 
-### Migrações
+### Migrations
 
 ```bash
-# Criar nova migração
-alembic revision --autogenerate -m "descrição da mudança"
+# Create new migration
+alembic revision --autogenerate -m "change description"
 
-# Aplicar migrações
+# Apply migrations
 alembic upgrade head
 
-# Reverter migração
+# Revert migration
 alembic downgrade -1
 ```
 
-### Extensão pgvector
+### pgvector Extension
 
-O banco `chat_db` utiliza a extensão `pgvector` para busca vetorial (RAG). A extensão é ativada automaticamente via script de inicialização.
+The `chat_db` database uses the `pgvector` extension for vector search (RAG). The extension is automatically enabled via initialization script.
 
-## 🧪 Testes
+## 🧪 Testing
 
 ```bash
-# Executar todos os testes
+# Run all tests
 pytest
 
-# Executar com cobertura
+# Run with coverage
 pytest --cov=app --cov-report=html
 
-# Executar testes específicos
+# Run specific tests
 pytest tests/unit/test_process_message_use_case.py
 ```
 
-### Tipos de Testes
+### Test Types
 
-- **Unit Tests**: Testam casos de uso isoladamente com fakes
-- **Contract Tests**: Testam contratos de interfaces (ports)
-- **Integration Tests**: Testam endpoints da API
+- **Unit Tests**: Test use cases in isolation with fakes
+- **Contract Tests**: Test interface contracts (ports)
+- **Integration Tests**: Test API endpoints
 
-## 📦 Estrutura do Projeto
+## 📦 Project Structure
 
 ```
 backend-ia-proj/
 ├── app/
-│   ├── api/              # Camada de API (endpoints, DTOs, middleware)
-│   ├── application/      # Casos de uso (use cases)
-│   ├── domain/           # Entidades, Value Objects, Ports
-│   ├── infrastructure/   # Implementações (LLM, DB, Logging)
-│   ├── bootstrap.py      # Container de dependências
+│   ├── api/              # API layer (endpoints, DTOs, middleware)
+│   ├── application/      # Use cases
+│   ├── domain/           # Entities, Value Objects, Ports
+│   ├── infrastructure/   # Implementations (LLM, DB, Logging)
+│   ├── bootstrap.py      # Dependency container
 │   └── main.py           # Entry point
-├── alembic/              # Migrações de banco de dados
-├── tests/                # Testes
-├── docs/                 # Documentação
-└── Dockerfile            # Imagem Docker
+├── alembic/              # Database migrations
+├── tests/                # Tests
+├── docs/                 # Documentation
+└── Dockerfile            # Docker image
 ```
 
-## 🔍 Observabilidade
+## 🔍 Observability
 
 ### Logs
 
-A aplicação utiliza structured logging com correlation IDs para rastreamento de requisições.
+The application uses structured logging with correlation IDs for request tracking.
 
-### Métricas
+### Metrics
 
-Métricas são coletadas pelo Prometheus (quando implementado):
-- Número de requisições
-- Tempo de resposta
-- Taxa de erro
+Metrics are collected by Prometheus (when implemented):
+- Request count
+- Response time
+- Error rate
 
 ### Tracing
 
-Traces distribuídos são enviados para o Jaeger para visualização de latência e dependências.
+Distributed traces are sent to Jaeger for latency and dependency visualization.
 
-## 🛠️ Desenvolvimento
+## 🛠️ Development
 
-### Adicionar Novo Provedor LLM
+### Adding a New LLM Provider
 
-1. Implementar `LLMPort` em `app/infrastructure/llm/`
-2. Registrar no factory (`app/infrastructure/llm/factory.py`)
-3. Adicionar configuração em `settings.py`
-4. Criar testes de contrato
+1. Implement `LLMPort` in `app/infrastructure/llm/`
+2. Register in factory (`app/infrastructure/llm/factory.py`)
+3. Add configuration in `settings.py`
+4. Create contract tests
 
-### Adicionar Novo Endpoint
+### Adding a New Endpoint
 
-1. Criar DTO em `app/api/dto/`
-2. Criar caso de uso em `app/application/use_cases/`
-3. Criar rota em `app/api/routes/`
-4. Registrar rota em `app/main.py`
+1. Create DTO in `app/api/dto/`
+2. Create use case in `app/application/use_cases/`
+3. Create route in `app/api/routes/`
+4. Register route in `app/main.py`
 
-## 📝 Licença
+## 📝 License
 
-[Adicione sua licença aqui]
+[Add your license here]
 
-## 🤝 Contribuindo
+## 🤝 Contributing
 
-[Adicione instruções de contribuição aqui]
+[Add contribution instructions here]

@@ -124,6 +124,10 @@ class StreamMessageUseCase:
         conversation.add_message(user_message)
         saved_conversation = await self.repository.save(conversation)
         
+        # Yield conversation_id as metadata before streaming chunks
+        # Frontend can extract this to track the conversation
+        yield f"__CONVERSATION_ID__:{saved_conversation.id}"
+        
         if self.logger:
             self.logger.debug(
                 "User message saved before streaming",

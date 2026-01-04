@@ -79,6 +79,16 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    # Ensure the database URL is set
+    db_url = config.get_main_option("sqlalchemy.url")
+    if not db_url or db_url == "driver://user:pass@localhost/dbname":
+        # Try to get from settings again
+        if settings.database_url:
+            db_url = settings.database_url
+            if db_url.startswith("postgresql+asyncpg://"):
+                db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+            config.set_main_option("sqlalchemy.url", db_url)
+    
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
