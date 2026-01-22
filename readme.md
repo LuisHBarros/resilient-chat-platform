@@ -337,7 +337,7 @@ Pull requests are welcome! For major changes, please open an issue first to disc
 
 **Luis H. Barros**
 - GitHub: [@LuisHBarros](https://github.com/LuisHBarros)
-- LinkedIn: [your-linkedin]
+- LinkedIn: [Luis Henrique de Barros](https://www.linkedin.com/in/luis-henrique-de-barros-207929226/)
 - Email: luishrbr@gmail.com
 
 ---
