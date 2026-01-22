@@ -184,10 +184,3 @@ Distributed traces are sent to Jaeger for latency and dependency visualization.
 3. Create route in `app/api/routes/`
 4. Register route in `app/main.py`
 
-## 📝 License
-
-[Add your license here]
-
-## 🤝 Contributing
-
-[Add contribution instructions here]
